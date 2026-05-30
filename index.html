@@ -328,7 +328,7 @@
     }
     .result-unit { font-size: 11px; color: var(--muted); margin-top: 4px; font-family: 'JetBrains Mono', monospace; }
 
-    .breakdown { margin-top: 14px; display: none; gap: 8px; grid-template-columns: 1fr 1fr 1fr; }
+    .breakdown { margin-top: 14px; display: none; gap: 8px; grid-template-columns: 1fr 1fr; }
     .breakdown.visible { display: grid; }
     .breakdown-item {
       background: var(--surface); border: 1px solid var(--border);
@@ -524,7 +524,7 @@
     <div class="sec-label">Cons Calculator</div>
 
     <div class="formula">
-      <strong>Cons</strong> = Current Risk ÷ SL Pip<br/>
+      <strong>Cons</strong> = Current Risk ÷ SL Pip &nbsp;·&nbsp; <strong>TP Pip</strong> = SL Pip × 2.4<br/>
       <span style="color:var(--muted);font-size:10px;">Risk auto-synced from current tier</span>
     </div>
 
@@ -558,7 +558,11 @@
         <div class="breakdown-val blue" id="bdSL">—</div>
       </div>
       <div class="breakdown-item">
-        <div class="breakdown-label">TP Target</div>
+        <div class="breakdown-label">TP Pip</div>
+        <div class="breakdown-val" style="color:var(--gold)" id="bdTPPip">—</div>
+      </div>
+      <div class="breakdown-item">
+        <div class="breakdown-label">TP Target ($)</div>
         <div class="breakdown-val" id="bdTP">$24.00</div>
       </div>
     </div>
@@ -676,19 +680,23 @@
     const box = document.getElementById('resultBox');
     const valEl  = document.getElementById('resultValue');
     const unitEl = document.getElementById('resultUnit');
-    const bdSL   = document.getElementById('bdSL');
+    const bdSL    = document.getElementById('bdSL');
+    const bdTPPip = document.getElementById('bdTPPip');
 
     if (!isNaN(pip) && pip > 0) {
-      const cons = t.risk / pip;
+      const cons  = t.risk / pip;
+      const tpPip = parseFloat((pip * RR).toFixed(2));
       box.classList.add('active');
-      valEl.textContent  = cons.toFixed(2);
-      unitEl.textContent = `contracts  ·  Risk $${fmt(t.risk)}  ÷  ${pip} pip`;
-      bdSL.textContent   = pip.toFixed(1) + ' pip';
+      valEl.textContent    = cons.toFixed(2);
+      unitEl.textContent   = `contracts  ·  Risk $${fmt(t.risk)}  ÷  ${pip} pip`;
+      bdSL.textContent     = pip.toFixed(1) + ' pip';
+      bdTPPip.textContent  = tpPip.toFixed(1) + ' pip';
     } else {
       box.classList.remove('active');
-      valEl.textContent  = '—';
-      unitEl.textContent = 'Enter SL pip value above';
-      bdSL.textContent   = '—';
+      valEl.textContent    = '—';
+      unitEl.textContent   = 'Enter SL pip value above';
+      bdSL.textContent     = '—';
+      bdTPPip.textContent  = '—';
     }
     renderTable(); // refresh cons column
   }
