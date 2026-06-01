@@ -465,7 +465,7 @@
     <div class="tier-display" id="tierDisplay">
       <div class="tier-display-label">Current Tier</div>
       <div class="tier-display-value" id="tierVal">1</div>
-      <div class="tier-display-sub" id="tierSub">1 TP to reach Tier 1.1</div>
+      <div class="tier-display-sub" id="tierSub">1 TP to reach Tier 2</div>
     </div>
 
     <!-- Progress -->
@@ -626,14 +626,13 @@
 <script>
   const RR = 2.4;
 
-  // Build tier list: 1, 1.1, 2, 2.1, ... 10, 10.1
+  // Build tier list: 1, 2, 3, ... 10 (no .1 sub-tiers)
   function buildTiers() {
     const list = [];
     let risk = 10;
     for (let n = 1; n <= 10; n++) {
       const tp = parseFloat((risk * RR).toFixed(2));
-      list.push({ label: `${n}`,   whole: n, isSub: false, risk, tp });
-      list.push({ label: `${n}.1`, whole: n, isSub: true,  risk, tp });
+      list.push({ label: `${n}`, whole: n, isSub: false, risk, tp });
       risk = tp;
     }
     return list;
@@ -641,12 +640,9 @@
 
   const TIERS = buildTiers();
 
-  // SL drop: always drops to previous whole tier (no .1)
+  // SL drop: drop to previous tier, floor at Tier 1
   function slDropIdx(idx) {
-    const n = TIERS[idx].whole;
-    if (n <= 1) return 0; // floor at Tier 1
-    // target = tier (n-1), which is at index (n-2)*2
-    return (n - 2) * 2;
+    return Math.max(0, idx - 1);
   }
 
   let state = {
@@ -660,7 +656,7 @@
 
   function currentTier() { return TIERS[state.tierIdx]; }
 
-  const STORAGE_KEY = 'tiercalc_state_v1';
+  const STORAGE_KEY = 'tiercalc_state_v2';
   let saveTimer = null;
 
   function saveState() {
