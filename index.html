@@ -428,6 +428,24 @@
       margin-top: 24px; text-align: center; font-size: 11px; color: var(--muted);
       font-family: 'JetBrains Mono', monospace; letter-spacing: 0.05em;
     }
+
+    /* ── SAVE INDICATOR ── */
+    .save-pill {
+      position: fixed; bottom: 20px; right: 20px;
+      background: var(--card); border: 1px solid rgba(0,229,160,0.3);
+      border-radius: 99px; padding: 7px 14px;
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      color: var(--accent); letter-spacing: 0.08em;
+      display: flex; align-items: center; gap: 7px;
+      opacity: 0; transform: translateY(6px);
+      transition: opacity 0.3s, transform 0.3s;
+      pointer-events: none; z-index: 999;
+    }
+    .save-pill.show { opacity: 1; transform: translateY(0); }
+    .save-pill .sp-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--accent); box-shadow: 0 0 6px var(--accent);
+    }
   </style>
 </head>
 <body>
@@ -599,6 +617,12 @@
   <div class="footer">made for the traders 📈</div>
 </div>
 
+<!-- Save indicator -->
+<div class="save-pill" id="savePill">
+  <div class="sp-dot"></div>
+  <span>progress saved</span>
+</div>
+
 <script>
   const RR = 2.4;
 
@@ -636,25 +660,64 @@
 
   function currentTier() { return TIERS[state.tierIdx]; }
 
+  const STORAGE_KEY = 'tiercalc_state_v1';
+  let saveTimer = null;
+
+  function saveState() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      showSaved();
+    } catch(e) {}
+  }
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        // Validate it looks like our state
+        if (typeof saved.tierIdx === 'number') {
+          state = {
+            tierIdx:  Math.min(Math.max(saved.tierIdx, 0), TIERS.length - 1),
+            totalTP:  saved.totalTP  || 0,
+            totalSL:  saved.totalSL  || 0,
+            wins:     saved.wins     || 0,
+            losses:   saved.losses   || 0,
+            history:  Array.isArray(saved.history) ? saved.history : [],
+          };
+          return true;
+        }
+      }
+    } catch(e) {}
+    return false;
+  }
+
+  function showSaved() {
+    const pill = document.getElementById('savePill');
+    pill.classList.add('show');
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => pill.classList.remove('show'), 1800);
+  }
+
   function doTP() {
     const t = currentTier();
     state.wins++;
     state.totalTP = parseFloat((state.totalTP + t.tp).toFixed(2));
 
     const prevLabel = t.label;
-    // Advance 1 step
     if (state.tierIdx < TIERS.length - 1) state.tierIdx++;
     const nextLabel = currentTier().label;
 
     state.history.unshift({ type:'TP', from: prevLabel, to: nextLabel, risk: t.risk, tp: t.tp });
     render('tp');
+    saveState();
   }
 
   function doSL() {
     const t = currentTier();
     state.losses++;
-    state.totalSL  = parseFloat((state.totalSL  + t.risk).toFixed(2));
-    state.totalTP  = parseFloat((state.totalTP  - t.risk).toFixed(2));
+    state.totalSL = parseFloat((state.totalSL + t.risk).toFixed(2));
+    state.totalTP = parseFloat((state.totalTP - t.risk).toFixed(2));
 
     const prevLabel = t.label;
     state.tierIdx = slDropIdx(state.tierIdx);
@@ -662,11 +725,13 @@
 
     state.history.unshift({ type:'SL', from: prevLabel, to: nextLabel, risk: t.risk });
     render('sl');
+    saveState();
   }
 
   function resetAll() {
     state = { tierIdx: 0, totalTP: 0, totalSL: 0, wins: 0, losses: 0, history: [] };
     document.getElementById('slPip').value = '';
+    try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
     render('reset');
   }
 
@@ -833,7 +898,8 @@
     });
   }
 
-  // Init
+  // Init — load saved state or start fresh
+  loadState();
   render('reset');
 </script>
 </body>
